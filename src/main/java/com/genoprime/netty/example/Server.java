@@ -1,6 +1,8 @@
 package com.genoprime.netty.example;
 
+import com.game.GameUtil;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -11,6 +13,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -54,18 +57,33 @@ public class Server {
             pipeline.addLast("aggregator", new HttpObjectAggregator(1));
             pipeline.addLast("http-response-encoder", new HttpResponseEncoder());
             pipeline.addLast("request-handler", new WebSocketServerProtocolHandler("/websocket"));
-            pipeline.addLast("handler", new SomeHandler());
+            pipeline.addLast("handler", new BinaryWebSocketHandler());
         }
     }
 
-    public class SomeHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+    public class TextWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
         @Override
         protected void channelRead0(ChannelHandlerContext channelHandlerContext, TextWebSocketFrame textWebSocketFrame) throws Exception {
             final String x = textWebSocketFrame.text();
             // uncomment to print request
-            // /logger.info("Request received: {}", x);
-            final String[] y = x.split(":");
-            channelHandlerContext.writeAndFlush(new TextWebSocketFrame(y[0] + ":" + y[1].toUpperCase()));
+            System.out.println("Request received: " + x);
+//            logger.info("Request received: {}", x);
+//            final String[] y = x.split(":");
+//            channelHandlerContext.writeAndFlush(new TextWebSocketFrame(y[0] + ":" + y[1].toUpperCase()));
+            channelHandlerContext.writeAndFlush(new TextWebSocketFrame("hello client"));
+        }
+    }
+
+    public class BinaryWebSocketHandler extends SimpleChannelInboundHandler<BinaryWebSocketFrame> {
+        @Override
+        protected void channelRead0(ChannelHandlerContext channelHandlerContext, BinaryWebSocketFrame frame) throws Exception {
+
+            ByteBuf buf = frame.content();
+
+            System.out.println("server received: " + buf.toString());
+            GameUtil.track(buf);
+
+            channelHandlerContext.writeAndFlush(new BinaryWebSocketFrame(buf));
         }
     }
 }

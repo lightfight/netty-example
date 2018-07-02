@@ -1,5 +1,9 @@
 package com.genoprime.netty.example;
 
+import com.alibaba.fastjson.JSONObject;
+import com.game.GZipUtil;
+import com.game.GameUtil;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,6 +17,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.CharsetUtil;
+import jdk.nashorn.internal.scripts.JO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +25,7 @@ import org.slf4j.LoggerFactory;
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
-    private static final Logger logger = LoggerFactory.getLogger(WebSocketClientHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WebSocketClientHandler.class);
 
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;
@@ -68,13 +73,31 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         if (frame instanceof TextWebSocketFrame) {
             final TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
             // uncomment to print request
-            // logger.info(textFrame.text());
+            LOGGER.info("textFrame.text() = {}", textFrame.text());
         } else if (frame instanceof PongWebSocketFrame) {
         } else if (frame instanceof CloseWebSocketFrame)
             ch.close();
         else if (frame instanceof BinaryWebSocketFrame) {
             // uncomment to print request
-            // logger.info(frame.content().toString());
+            ByteBuf buf = frame.content();
+
+            // ## 普通的二进制数据
+//            LOGGER.info("client received = {} " + buf.toString());
+//            GameUtil.track(buf);
+
+            // ## 需要解压的二进制数据
+            String str = GZipUtil.deToString(GameUtil.toBytes(buf));
+//            LOGGER.info("str = {}", str);
+            System.out.println(str);
+
+            JSONObject json = JSONObject.parseObject(str);
+            if (json.containsKey("ping")) {
+                JSONObject pong = new JSONObject();
+                pong.put("pong", json.get("ping"));
+
+                System.out.println(pong);
+                ctx.channel().writeAndFlush(new TextWebSocketFrame(pong.toString()));
+            }
         }
 
     }

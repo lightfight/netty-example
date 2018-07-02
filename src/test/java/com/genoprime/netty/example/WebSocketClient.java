@@ -1,6 +1,8 @@
 package com.genoprime.netty.example;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -11,10 +13,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.codec.http.websocketx.*;
 
 import java.io.IOException;
 import java.net.URI;
@@ -73,5 +72,15 @@ public class WebSocketClient {
 
     public void eval(final String text) throws IOException {
         ch.writeAndFlush(new TextWebSocketFrame(text));
+    }
+
+    /**
+     * 发送二进制数据
+     * @param data
+     */
+    public void sendBytes(byte[] data){
+        ByteBuf buf = Unpooled.buffer(data.length);
+        buf.writeBytes(data);
+        ch.writeAndFlush(new BinaryWebSocketFrame(buf));
     }
 }
